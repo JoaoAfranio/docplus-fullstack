@@ -1,0 +1,58 @@
+version: "3"
+
+services:
+  db:
+    image: postgres
+    container_name: db
+    restart: always
+    ports:
+      - 5433:5432
+    env_file:
+      - ./docplus-back/.env
+    volumes:
+      - pg:/var/lib/postgresql/data
+
+  node_back:
+    container_name: node_back
+    build: ./docplus-back
+    command: sh -c "npm run migration:run && npm run seed && npm run start"
+    ports:
+      - 4000:4000
+    depends_on:
+      - db
+    env_file:
+      - ./docplus-back/.env
+
+  node_bff:
+    container_name: node_bff
+    build: ./docplus-bff
+    ports:
+      - 4001:4001
+    depends_on:
+      - db
+      - node_back
+    env_file:
+      - ./docplus-bff/.env
+
+  react:
+    container_name: react
+    build: ./docplus-front
+    volumes:
+      - react-volume:/var/www/html
+
+  nginx_app:
+    container_name: nginx_app
+    build: ./nginx
+    ports:
+      - 8080:80
+    volumes:
+      - react-volume:/var/www/html
+    depends_on:
+      - db
+      - node_back
+      - node_bff
+      - react
+
+volumes:
+  pg:
+  react-volume:
